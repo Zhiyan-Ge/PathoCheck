@@ -1,5 +1,46 @@
-/.trae
-/backend
-/frontend.7z
-/PathoCheck_Architecture_Design.md
-/taffy.png
+# Java / Maven
+backend/target/
+*.class
+
+# Vue / Node
+frontend/node_modules/
+frontend/dist/
+
+# Runtime datasets
+backend/storage/datasets/*
+!backend/storage/datasets/.gitkeep
+
+# Runtime images
+backend/storage/images/*
+!backend/storage/images/.gitkeep
+
+# Runtime models
+backend/storage/models/*
+!backend/storage/models/.gitkeep
+
+# Generated reports
+backend/storage/reports/*
+!backend/storage/reports/.gitkeep
+
+# Logs
+backend/storage/logs/*
+!backend/storage/logs/.gitkeep
+*.log
+
+# Environment and secrets
+.env
+.env.*
+application-local.properties
+
+# Temporary inspection files
+mysql_env_report.txt
+structure.txt
+
+# IDE
+.idea/
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
