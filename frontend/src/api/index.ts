@@ -6,7 +6,11 @@ const apiClient = axios.create({
   timeout: 0,
 });
 
+<<<<<<< HEAD
 export const loadDataset = async (datasetName: string, files: File[], relativePaths: string[], onProgress?: (percent: number) => void) => {
+=======
+export const loadDataset = async (datasetName: string, files: File[], relativePaths: string[]) => {
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
   const formData = new FormData();
   formData.append('datasetName', datasetName);
   files.forEach(file => {
@@ -17,12 +21,15 @@ export const loadDataset = async (datasetName: string, files: File[], relativePa
   });
   const res = await apiClient.post('/datasets/load', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+<<<<<<< HEAD
     onUploadProgress: (progressEvent) => {
       if (onProgress && progressEvent.total) {
         const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(percent);
       }
     },
+=======
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
   });
   return res.data;
 };
@@ -37,18 +44,25 @@ export const deleteDataset = async (datasetId: number) => {
   return res.data;
 };
 
+<<<<<<< HEAD
 export const loadModel = async (modelName: string, modelFile: File, onProgress?: (percent: number) => void) => {
+=======
+export const loadModel = async (modelName: string, modelFile: File) => {
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
   const formData = new FormData();
   formData.append('modelName', modelName);
   formData.append('modelFile', modelFile);
   const res = await apiClient.post('/models/load', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+<<<<<<< HEAD
     onUploadProgress: (progressEvent) => {
       if (onProgress && progressEvent.total) {
         const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(percent);
       }
     },
+=======
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
   });
   return res.data;
 };

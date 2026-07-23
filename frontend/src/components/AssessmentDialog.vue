@@ -14,6 +14,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:visible', 'assessment-complete'])
 
 const loading = ref(false)
+<<<<<<< HEAD
 const progress = ref(0)
 let timer: any = null
 
@@ -33,6 +34,8 @@ const stopProgress = () => {
   }
   progress.value = 100
 }
+=======
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
 
 const close = () => {
   if (!loading.value) {
@@ -43,6 +46,7 @@ const close = () => {
 const handleStart = async () => {
   if (!props.model || !props.image) return
   loading.value = true
+<<<<<<< HEAD
   startProgress()
   try {
     const report = await startAssessment(props.model.id, props.image.imageId)
@@ -52,6 +56,12 @@ const handleStart = async () => {
     }, 500)
   } catch (e: any) {
     stopProgress()
+=======
+  try {
+    const report = await startAssessment(props.model.id, props.image.imageId)
+    emit('assessment-complete', report)
+  } catch (e: any) {
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
     ElMessage.error('Assessment failed: ' + e.message)
   } finally {
     loading.value = false
@@ -67,6 +77,7 @@ const handleStart = async () => {
     width="500px"
     destroy-on-close
   >
+<<<<<<< HEAD
     <div v-if="image" class="space-y-4 relative">
       <!-- Assessment Progress Overlay -->
       <div v-if="loading" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded">
@@ -81,6 +92,9 @@ const handleStart = async () => {
         <div class="mt-4 text-white text-base font-medium">正在执行病理评估...</div>
       </div>
 
+=======
+    <div v-if="image" v-loading="loading" element-loading-text="Assessing Image..." class="space-y-4">
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
       <div class="bg-[var(--trae-bg)] p-4 rounded border border-[var(--trae-border)] flex justify-center items-center h-48 overflow-hidden">
         <img v-if="previewUrl" :src="previewUrl" class="max-h-full max-w-full object-contain" />
         <div v-else class="text-gray-500">

@@ -36,6 +36,7 @@ html.dark {
   --el-border-color-light: var(--trae-border);
   --el-fill-color-blank: var(--trae-bg);
 }
+<<<<<<< HEAD
 
 /* Center notifications */
 .el-message {
@@ -49,3 +50,5 @@ html.dark {
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
 }
+=======
+>>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
