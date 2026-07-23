@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --trae-bg: #1e1e1e;
+  --trae-bg-panel: #252526;
+  --trae-border: #333333;
+  --trae-text: #cccccc;
+  --trae-text-active: #ffffff;
+  --trae-accent: #007acc;
+  --trae-toolbar-bg: #323233;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--trae-bg);
+  color: var(--trae-text);
+  overflow: hidden;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Element Plus Dark Theme Overrides */
+html.dark {
+  --el-bg-color: var(--trae-bg-panel);
+  --el-bg-color-overlay: var(--trae-bg-panel);
+  --el-text-color-primary: var(--trae-text-active);
+  --el-text-color-regular: var(--trae-text);
+  --el-border-color: var(--trae-border);
+  --el-border-color-light: var(--trae-border);
+  --el-fill-color-blank: var(--trae-bg);
+}
+
+/* Center notifications */
+.el-message {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.el-notification {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
