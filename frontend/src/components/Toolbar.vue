@@ -147,16 +147,12 @@ const downloadLogs = () => {
       destroy-on-close
       append-to-body
     >
-<<<<<<< HEAD
       <div class="relative">
         <!-- Loading Progress Bar -->
         <div v-if="logLoading" class="absolute top-0 left-0 right-0 z-50">
           <el-progress :percentage="100" :indeterminate="true" :show-text="false" :stroke-width="2" />
         </div>
 
-=======
-      <div v-loading="logLoading">
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
         <div class="flex justify-end space-x-2 mb-2">
           <el-button size="small" @click="fetchLogs">
             <template #icon><RefreshCw class="w-3 h-3 mr-1" /></template>刷新

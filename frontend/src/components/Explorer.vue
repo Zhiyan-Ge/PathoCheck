@@ -17,11 +17,8 @@ const datasets = ref<Dataset[]>([])
 const models = ref<Model[]>([])
 const loading = ref(false)
 const activeTab = ref('datasets')
-<<<<<<< HEAD
 const uploadProgress = ref(0)
 const isUploading = ref(false)
-=======
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
 
 const fetchData = async () => {
   loading.value = true
@@ -60,12 +57,8 @@ const handleImportDataset = async () => {
     const datasetName = folderPath ? folderPath.split('/')[0] : 'Unknown_Dataset'
     const relativePaths = files.map((f: any) => f.webkitRelativePath)
 
-<<<<<<< HEAD
     isUploading.value = true
     uploadProgress.value = 0
-=======
-    loading.value = true
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
     ElNotification.info({
       title: '正在导入',
       message: `正在导入数据集 "${datasetName}"，请稍候...`,
@@ -74,7 +67,6 @@ const handleImportDataset = async () => {
     })
 
     try {
-<<<<<<< HEAD
       await loadDataset(datasetName, files, relativePaths, (p) => {
         uploadProgress.value = p
       })
@@ -84,21 +76,12 @@ const handleImportDataset = async () => {
         duration: 3000,
         showClose: true
       })
-=======
-      await loadDataset(datasetName, files, relativePaths)
-      ElNotification.close('import-notify')
-      ElMessage.success('数据集导入成功 (Dataset imported successfully)')
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
       await fetchData()
     } catch (err: any) {
       ElNotification.close('import-notify')
       ElMessage.error('导入失败: ' + err.message)
     } finally {
-<<<<<<< HEAD
       isUploading.value = false
-=======
-      loading.value = false
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
     }
   }
   input.click()
@@ -124,12 +107,8 @@ const handleImportModel = () => {
   input.onchange = async (e: any) => {
     const file = e.target.files[0]
     if (!file) return
-<<<<<<< HEAD
     isUploading.value = true
     uploadProgress.value = 0
-=======
-    loading.value = true
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
     ElNotification.info({
       title: '正在导入',
       message: `正在导入模型 "${file.name}"...`,
@@ -138,7 +117,6 @@ const handleImportModel = () => {
     })
 
     try {
-<<<<<<< HEAD
       await loadModel(file.name.replace('.model', ''), file, (p) => {
         uploadProgress.value = p
       })
@@ -148,21 +126,12 @@ const handleImportModel = () => {
         duration: 3000,
         showClose: true
       })
-=======
-      await loadModel(file.name.replace('.model', ''), file)
-      ElNotification.close('import-model-notify')
-      ElMessage.success('模型导入成功 (Model imported successfully)')
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
       await fetchData()
     } catch (err: any) {
       ElNotification.close('import-model-notify')
       ElMessage.error('导入失败: ' + err.message)
     } finally {
-<<<<<<< HEAD
       isUploading.value = false
-=======
-      loading.value = false
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
     }
   }
   input.click()
@@ -258,7 +227,6 @@ defineExpose({
     custom-class="explorer-dialog"
     destroy-on-close
   >
-<<<<<<< HEAD
     <div class="flex h-[500px] relative">
       <!-- Upload Progress Overlay -->
       <div v-if="isUploading" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -281,9 +249,6 @@ defineExpose({
         <el-progress :percentage="100" :indeterminate="true" :show-text="false" :stroke-width="2" />
       </div>
 
-=======
-    <div class="flex h-[500px]" v-loading="loading">
->>>>>>> f2b1b414223fd24c9e02afe59abc1f558944c254
       <!-- Sidebar -->
       <div class="w-48 border-r border-[var(--trae-border)] flex flex-col p-2 space-y-1">
         <div 
