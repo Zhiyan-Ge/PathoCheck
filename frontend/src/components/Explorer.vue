@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
-import { Upload, Trash2, Image as ImageIcon, Box, Database, Play, Loader2 } from 'lucide-vue-next'
+import { Upload, Trash2, Image as ImageIcon, Box, Database, Play } from 'lucide-vue-next'
 import { listDatasets, deleteDataset, loadDataset, listModels, deleteModel, loadModel, selectImage, trainModel } from '../api'
 import type { Dataset, Model } from '../types'
 
@@ -24,9 +24,6 @@ const isTraining = ref(false)
 
 const fetchData = async () => {
   loading.value = true
-  // 预先清空列表，增强刷新感 (Clear lists to show refresh state)
-  datasets.value = []
-  models.value = []
   try {
     const [d, m] = await Promise.all([listDatasets(), listModels()])
     datasets.value = [...d]
@@ -43,12 +40,27 @@ watch(() => props.visible, (val) => {
 })
 
 const close = () => {
-  emit('update:visible', false)
+  if (!isUploading.value && !isTraining.value) {
+    emit('update:visible', false)
+  }
+}
+
+// 轮询检查资源是否已出现在列表中 (Poll to check if resource exists in list)
+const pollForResource = async (type: 'dataset' | 'model', name: string, maxRetries = 10) => {
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(resolve => setTimeout(resolve, 1500)); // 每次间隔1.5秒
+    await fetchData();
+    if (type === 'dataset') {
+      if (datasets.value.some(d => d.datasetName === name)) return true;
+    } else {
+      if (models.value.some(m => m.modelName === name)) return true;
+    }
+  }
+  return false;
 }
 
 // Handlers
 const handleImportDataset = async () => {
-  // Mock file input
   const input = document.createElement('input')
   input.type = 'file'
   input.webkitdirectory = true
@@ -56,40 +68,49 @@ const handleImportDataset = async () => {
   input.onchange = async (e: any) => {
     const files = Array.from(e.target.files) as File[]
     if (!files.length) return
-    
-    // the first file's path can determine the dataset name (folder name)
+
     const folderPath = (files[0] as any).webkitRelativePath
     const datasetName = folderPath ? folderPath.split('/')[0] : 'Unknown_Dataset'
     const relativePaths = files.map((f: any) => f.webkitRelativePath)
 
     isUploading.value = true
     uploadProgress.value = 0
-    ElNotification.info({
+    
+    const notification = ElNotification.info({
       title: '正在导入',
-      message: `正在导入数据集 "${datasetName}"，请稍候...`,
+      message: `正在从 TCP 协议同步数据集 "${datasetName}"...`,
       duration: 0,
-      id: 'import-notify'
+      showClose: false
     })
 
     try {
+      // 1. 真实上传过程 (Real upload progress)
       await loadDataset(datasetName, files, relativePaths, (p) => {
         uploadProgress.value = p
       })
-      ElNotification.close('import-notify')
-      ElMessage.success({
-        message: '数据集导入成功 (Dataset imported successfully)',
-        duration: 3000,
-        showClose: true
-      })
-      // 延迟一秒刷新，确保后端文件索引已更新 (Delay to ensure backend indexing)
-      setTimeout(async () => {
-        await fetchData()
-      }, 1000)
+      
+      // 2. 上传完成，进入后端处理/索引轮询阶段 (Upload done, polling for backend indexing)
+      uploadProgress.value = 100;
+      notification.message = `上传完成，正在同步数据库索引...`;
+      
+      const success = await pollForResource('dataset', datasetName);
+      
+      notification.close();
+      if (success) {
+        ElMessage.success({
+          message: `数据集 "${datasetName}" 导入并同步成功`,
+          duration: 3000,
+          showClose: true
+        })
+      } else {
+        ElMessage.warning('数据集已上传，但同步到列表超时，请手动刷新');
+      }
     } catch (err: any) {
-      ElNotification.close('import-notify')
+      notification.close();
       ElMessage.error('导入失败: ' + err.message)
     } finally {
       isUploading.value = false
+      uploadProgress.value = 0
     }
   }
   input.click()
@@ -97,11 +118,11 @@ const handleImportDataset = async () => {
 
 const handleDeleteDataset = async (id: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除此数据集吗？ (Are you sure you want to delete this dataset?)', '警告', { type: 'warning' })
+    await ElMessageBox.confirm('确定要删除此数据集吗？', '警告', { type: 'warning' })
     loading.value = true
     await deleteDataset(id)
     if (props.selectedDataset?.id === id) emit('update:selectedDataset', null)
-    ElMessage.success('已删除 (Deleted)')
+    ElMessage.success('已删除')
     await fetchData()
   } catch (err: any) {
     if (err !== 'cancel') ElMessage.error('删除失败: ' + err.message)
@@ -115,34 +136,44 @@ const handleImportModel = () => {
   input.onchange = async (e: any) => {
     const file = e.target.files[0]
     if (!file) return
+    
+    const modelName = file.name.replace('.model', '');
     isUploading.value = true
     uploadProgress.value = 0
-    ElNotification.info({
+    
+    const notification = ElNotification.info({
       title: '正在导入',
       message: `正在导入模型 "${file.name}"...`,
       duration: 0,
-      id: 'import-model-notify'
+      showClose: false
     })
 
     try {
-      await loadModel(file.name.replace('.model', ''), file, (p) => {
+      await loadModel(modelName, file, (p) => {
         uploadProgress.value = p
       })
-      ElNotification.close('import-model-notify')
-      ElMessage.success({
-        message: '模型导入成功 (Model imported successfully)',
-        duration: 3000,
-        showClose: true
-      })
-      // 延迟一秒刷新，确保后端文件索引已更新 (Delay to ensure backend indexing)
-      setTimeout(async () => {
-        await fetchData()
-      }, 1000)
+      
+      uploadProgress.value = 100;
+      notification.message = `模型上传成功，正在同步数据库索引...`;
+      
+      const success = await pollForResource('model', modelName);
+      
+      notification.close();
+      if (success) {
+        ElMessage.success({
+          message: `模型 "${modelName}" 导入并同步成功`,
+          duration: 3000,
+          showClose: true
+        })
+      } else {
+        ElMessage.warning('模型已上传，但同步到列表超时，请手动刷新');
+      }
     } catch (err: any) {
-      ElNotification.close('import-model-notify')
+      notification.close();
       ElMessage.error('导入失败: ' + err.message)
     } finally {
       isUploading.value = false
+      uploadProgress.value = 0
     }
   }
   input.click()
@@ -151,48 +182,60 @@ const handleImportModel = () => {
 const handleTrainModel = async (dataset?: any) => {
   const targetDataset = dataset && dataset.id ? dataset : props.selectedDataset;
   if (!targetDataset) {
-    ElMessage.warning('请先在资源管理器中选择一个数据集 (Please select a dataset first)');
+    ElMessage.warning('请先在资源管理器中选择一个数据集');
     return;
   }
-  
+
   try {
-    const { value: modelName } = await ElMessageBox.prompt('请输入新模型名称 (Please enter a name for the new model)', '训练模型', {
+    const { value: modelName } = await ElMessageBox.prompt('请输入新模型名称', '训练模型', {
       confirmButtonText: '开始训练',
       cancelButtonText: '取消',
       inputValue: `RF-${new Date().getTime()}`
     })
-    
-    loading.value = true
+
     isTraining.value = true
     trainingProgress.value = 0
+    
+    // 模拟前端进度条 (Simulated frontend progress)
     const trainTimer = setInterval(() => {
-      if (trainingProgress.value < 95) {
+      if (trainingProgress.value < 90) {
         trainingProgress.value += Math.random() * 5
       }
-    }, 1000)
+    }, 800)
 
-    ElNotification.info({
+    const notification = ElNotification.info({
       title: '训练开始',
-      message: `正在使用数据集 "${targetDataset.datasetName}" 训练模型 "${modelName}"，请稍候...`,
+      message: `正在训练模型 "${modelName}"，请稍候...`,
       duration: 0,
-      id: 'train-notify'
+      showClose: false
     })
 
-    await trainModel(targetDataset.id, modelName)
-    clearInterval(trainTimer)
-    trainingProgress.value = 100
-    
-    ElNotification.close('train-notify')
-    ElNotification.success({
-      title: '训练完成',
-      message: `模型 "${modelName}" 训练成功！`,
-    })
-    await fetchData()
+    try {
+      await trainModel(targetDataset.id, modelName)
+      clearInterval(trainTimer)
+      trainingProgress.value = 95
+      notification.message = `算法计算完成，正在生成模型索引...`;
+      
+      const success = await pollForResource('model', modelName);
+      trainingProgress.value = 100;
+      
+      notification.close();
+      if (success) {
+        ElNotification.success({
+          title: '训练完成',
+          message: `模型 "${modelName}" 已训练并同步成功！`,
+        })
+      } else {
+        ElMessage.warning('训练已完成，但同步到列表超时，请手动刷新');
+      }
+    } catch (err: any) {
+      clearInterval(trainTimer);
+      notification.close();
+      ElMessage.error('训练失败: ' + err.message)
+    }
   } catch (err: any) {
-    ElNotification.close('train-notify')
-    if (err !== 'cancel') ElMessage.error('训练失败: ' + err.message)
+    // Prompt cancelled
   } finally {
-    loading.value = false
     isTraining.value = false
     trainingProgress.value = 0
   }
@@ -200,13 +243,11 @@ const handleTrainModel = async (dataset?: any) => {
 
 const handleDeleteModel = async (id: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除此模型吗？ (Are you sure you want to delete this model?)', '警告', { type: 'warning' })
+    await ElMessageBox.confirm('确定要删除此模型吗？', '警告', { type: 'warning' })
     loading.value = true
     await deleteModel(id)
     if (props.selectedModel?.id === id) emit('update:selectedModel', null)
-    ElMessage.success('已删除 (Deleted)')
-    // 强制清除本地列表并重新获取
-    models.value = models.value.filter(m => m.id !== id)
+    ElMessage.success('已删除')
     await fetchData()
   } catch (err: any) {
     if (err !== 'cancel') ElMessage.error('删除失败: ' + err.message)
@@ -234,6 +275,7 @@ const handleSelectImage = () => {
   }
   input.click()
 }
+
 defineExpose({
   handleImportDataset,
   handleImportModel,
@@ -300,7 +342,7 @@ defineExpose({
         </div>
         
         <div class="flex-1"></div>
-        <el-button type="primary" plain class="w-full justify-start" @click="handleSelectImage">
+        <el-button type="primary" plain class="w-full justify-start" @click="handleSelectImage" :disabled="isUploading || isTraining">
           <template #icon><ImageIcon /></template>
           选择图像评估
         </el-button>
@@ -311,13 +353,13 @@ defineExpose({
         <template v-if="activeTab === 'datasets'">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-medium">数据集列表</h3>
-            <el-button type="primary" size="small" @click="handleImportDataset">
+            <el-button type="primary" size="small" @click="handleImportDataset" :disabled="isUploading || isTraining">
               <template #icon><Upload /></template>
               导入数据集
             </el-button>
           </div>
           
-          <div v-if="datasets.length === 0" class="text-center text-gray-500 py-10">
+          <div v-if="datasets.length === 0 && !loading" class="text-center text-gray-500 py-10">
             暂无数据集
           </div>
           <div v-else class="space-y-3">
@@ -335,10 +377,10 @@ defineExpose({
                 </div>
               </div>
               <div class="flex space-x-2">
-                <el-button size="small" type="success" plain @click.stop="handleTrainModel(ds)" title="训练新模型">
+                <el-button size="small" type="success" plain @click.stop="handleTrainModel(ds)" title="训练新模型" :disabled="isUploading || isTraining">
                   <template #icon><Play /></template>
                 </el-button>
-                <el-button size="small" type="danger" plain @click.stop="handleDeleteDataset(ds.id)" title="删除">
+                <el-button size="small" type="danger" plain @click.stop="handleDeleteDataset(ds.id)" title="删除" :disabled="isUploading || isTraining">
                   <template #icon><Trash2 /></template>
                 </el-button>
               </div>
@@ -349,13 +391,13 @@ defineExpose({
         <template v-if="activeTab === 'models'">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-medium">模型列表</h3>
-            <el-button type="primary" size="small" @click="handleImportModel">
+            <el-button type="primary" size="small" @click="handleImportModel" :disabled="isUploading || isTraining">
               <template #icon><Upload /></template>
               导入模型
             </el-button>
           </div>
           
-          <div v-if="models.length === 0" class="text-center text-gray-500 py-10">
+          <div v-if="models.length === 0 && !loading" class="text-center text-gray-500 py-10">
             暂无模型
           </div>
           <div v-else class="space-y-3">
@@ -377,7 +419,7 @@ defineExpose({
                 </div>
               </div>
               <div>
-                <el-button size="small" type="danger" plain @click.stop="handleDeleteModel(m.id)" title="删除">
+                <el-button size="small" type="danger" plain @click.stop="handleDeleteModel(m.id)" title="删除" :disabled="isUploading || isTraining">
                   <template #icon><Trash2 /></template>
                 </el-button>
               </div>
