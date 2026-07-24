@@ -68,17 +68,19 @@ const handleStart = async () => {
     destroy-on-close
   >
     <div v-if="image" class="space-y-4 relative">
-      <!-- Assessment Progress Overlay -->
+      <!-- Assessment Progress Overlay (Linear style) -->
       <div v-if="loading" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded">
-        <el-progress type="circle" :percentage="Math.round(progress)" :stroke-width="8" :width="100">
-          <template #default="{ percentage }">
-            <div class="flex flex-col items-center">
-              <span class="text-xl font-bold text-white">{{ percentage }}%</span>
-              <span class="text-[10px] text-gray-300">评估中</span>
-            </div>
-          </template>
-        </el-progress>
-        <div class="mt-4 text-white text-base font-medium">正在执行病理评估...</div>
+        <div class="flex flex-col items-center w-full px-8">
+          <div class="mb-3 text-white text-lg font-medium">正在执行病理评估...</div>
+          <div class="w-full bg-white/10 rounded-full h-1.5 relative overflow-hidden">
+            <div 
+              class="absolute top-0 left-0 h-full bg-white transition-all duration-300 ease-out shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+              :style="{ width: `${Math.round(progress)}%` }"
+            ></div>
+          </div>
+          <div class="mt-2 text-white font-mono text-sm">{{ Math.round(progress) }}%</div>
+          <div class="mt-4 text-gray-400 text-xs">正在分析组织切片特征...</div>
+        </div>
       </div>
 
       <div class="bg-[var(--trae-bg)] p-4 rounded border border-[var(--trae-border)] flex justify-center items-center h-48 overflow-hidden">

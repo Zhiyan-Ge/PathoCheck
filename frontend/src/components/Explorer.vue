@@ -19,13 +19,18 @@ const loading = ref(false)
 const activeTab = ref('datasets')
 const uploadProgress = ref(0)
 const isUploading = ref(false)
+const trainingProgress = ref(0)
+const isTraining = ref(false)
 
 const fetchData = async () => {
   loading.value = true
+  // 预先清空列表，增强刷新感 (Clear lists to show refresh state)
+  datasets.value = []
+  models.value = []
   try {
     const [d, m] = await Promise.all([listDatasets(), listModels()])
-    datasets.value = d
-    models.value = m
+    datasets.value = [...d]
+    models.value = [...m]
   } catch (e: any) {
     ElMessage.error('Failed to load data: ' + e.message)
   } finally {
@@ -76,7 +81,10 @@ const handleImportDataset = async () => {
         duration: 3000,
         showClose: true
       })
-      await fetchData()
+      // 延迟一秒刷新，确保后端文件索引已更新 (Delay to ensure backend indexing)
+      setTimeout(async () => {
+        await fetchData()
+      }, 1000)
     } catch (err: any) {
       ElNotification.close('import-notify')
       ElMessage.error('导入失败: ' + err.message)
@@ -126,7 +134,10 @@ const handleImportModel = () => {
         duration: 3000,
         showClose: true
       })
-      await fetchData()
+      // 延迟一秒刷新，确保后端文件索引已更新 (Delay to ensure backend indexing)
+      setTimeout(async () => {
+        await fetchData()
+      }, 1000)
     } catch (err: any) {
       ElNotification.close('import-model-notify')
       ElMessage.error('导入失败: ' + err.message)
@@ -152,6 +163,14 @@ const handleTrainModel = async (dataset?: any) => {
     })
     
     loading.value = true
+    isTraining.value = true
+    trainingProgress.value = 0
+    const trainTimer = setInterval(() => {
+      if (trainingProgress.value < 95) {
+        trainingProgress.value += Math.random() * 5
+      }
+    }, 1000)
+
     ElNotification.info({
       title: '训练开始',
       message: `正在使用数据集 "${targetDataset.datasetName}" 训练模型 "${modelName}"，请稍候...`,
@@ -160,6 +179,9 @@ const handleTrainModel = async (dataset?: any) => {
     })
 
     await trainModel(targetDataset.id, modelName)
+    clearInterval(trainTimer)
+    trainingProgress.value = 100
+    
     ElNotification.close('train-notify')
     ElNotification.success({
       title: '训练完成',
@@ -171,6 +193,8 @@ const handleTrainModel = async (dataset?: any) => {
     if (err !== 'cancel') ElMessage.error('训练失败: ' + err.message)
   } finally {
     loading.value = false
+    isTraining.value = false
+    trainingProgress.value = 0
   }
 }
 
@@ -228,23 +252,32 @@ defineExpose({
     destroy-on-close
   >
     <div class="flex h-[500px] relative">
-      <!-- Upload Progress Overlay -->
-      <div v-if="isUploading" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-        <el-progress type="circle" :percentage="uploadProgress" :stroke-width="8" :width="120">
-          <template #default="{ percentage }">
-            <div class="flex flex-col items-center">
-              <span class="text-2xl font-bold text-white">{{ percentage }}%</span>
-              <span class="text-xs text-gray-300">已上传</span>
-            </div>
-          </template>
-        </el-progress>
-        <div class="mt-6 text-white text-lg font-medium">
-          {{ uploadProgress < 100 ? '正在上传资源...' : '服务器正在处理...' }}
+      <!-- Upload/Training Progress Overlay (Linear at bottom) -->
+      <div v-if="isUploading || isTraining" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="flex flex-col items-center max-w-md w-full px-10">
+          <div class="mb-4 text-white text-xl font-medium">
+            {{ isUploading ? (uploadProgress < 100 ? '正在同步资源...' : '服务器处理中...') : '正在训练模型...' }}
+          </div>
+          
+          <div class="w-full bg-white/10 rounded-full h-2 relative overflow-hidden">
+            <div 
+              class="absolute top-0 left-0 h-full bg-white transition-all duration-300 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+              :style="{ width: `${isUploading ? uploadProgress : trainingProgress}%` }"
+            ></div>
+          </div>
+          
+          <div class="mt-3 text-white font-mono text-lg">
+            {{ Math.round(isUploading ? uploadProgress : trainingProgress) }}%
+          </div>
+          
+          <div class="mt-6 text-gray-400 text-sm animate-pulse">
+            {{ isUploading ? '正在通过 TCP 协议传输切片数据' : '正在计算 RF 算法特征向量' }}
+          </div>
+          <div class="mt-1 text-gray-500 text-xs">请勿关闭当前资源管理器窗口</div>
         </div>
-        <div class="mt-2 text-gray-400 text-sm">请勿关闭窗口</div>
       </div>
 
-      <!-- Loading Progress Bar (for non-upload tasks) -->
+      <!-- Loading Progress Bar (for non-upload/train tasks) -->
       <div v-if="loading && !isUploading" class="absolute top-0 left-0 right-0 z-50">
         <el-progress :percentage="100" :indeterminate="true" :show-text="false" :stroke-width="2" />
       </div>

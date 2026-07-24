@@ -20,7 +20,7 @@ const showAbout = () => {
     `
     <div class="space-y-4">
       <div class="text-center">
-        <h3 class="text-lg font-bold text-[var(--trae-text-active)]">PathoCheck v1.0.0</h3>
+        <h3 class="text-lg font-bold text-[var(--trae-text-active)]">PathoCheck v1.0.3</h3>
         <p class="text-sm opacity-70">病理切片图像质量评估与有效区域筛选平台</p>
       </div>
       <div class="bg-white/5 p-3 rounded text-sm space-y-2 border border-white/10">
@@ -33,7 +33,7 @@ const showAbout = () => {
         </ul>
         <div class="pt-2 border-t border-white/10 mt-2">
           <p><b>环境信息：</b> Java Spring Boot + Vue 3 + Element Plus</p>
-          <p><b>开发者：</b> PathoCheck 团队</p>
+          <p><b>开发者：</b> Taffy团队</p>
         </div>
       </div>
       <p class="text-[10px] text-center opacity-40">© 2026 PathoCheck Project. All rights reserved.</p>
