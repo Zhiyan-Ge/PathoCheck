@@ -78,7 +78,7 @@ const handleImportDataset = async () => {
     
     const notification = ElNotification.info({
       title: '正在导入',
-      message: `正在从 TCP 协议同步数据集 "${datasetName}"...`,
+      message: `正在从同步数据集 "${datasetName}"...`,
       duration: 0,
       showClose: false
     })
