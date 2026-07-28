@@ -21,6 +21,41 @@ const uploadProgress = ref(0)
 const isUploading = ref(false)
 const trainingProgress = ref(0)
 const isTraining = ref(false)
+const videoRef = ref<HTMLVideoElement | null>(null)
+const PAUSE_TIME = 884
+let uploadFallbackTimer: any = null
+let hasRealUploadProgress = false
+
+const startUploadFallback = () => {
+  hasRealUploadProgress = false
+  if (uploadFallbackTimer) clearInterval(uploadFallbackTimer)
+  uploadFallbackTimer = setInterval(() => {
+    if (!isUploading.value) return
+    if (hasRealUploadProgress) return
+    if (uploadProgress.value >= 85) return
+    uploadProgress.value = Math.min(85, uploadProgress.value + 0.2 + Math.random() * 0.8)
+  }, 400)
+}
+
+const stopUploadFallback = () => {
+  if (uploadFallbackTimer) {
+    clearInterval(uploadFallbackTimer)
+    uploadFallbackTimer = null
+  }
+}
+
+const handleTimeUpdate = () => {
+  if (videoRef.value && (isUploading.value || isTraining.value) && videoRef.value.currentTime >= PAUSE_TIME) {
+    videoRef.value.pause()
+    videoRef.value.currentTime = PAUSE_TIME
+  }
+}
+
+watch([isUploading, isTraining], ([newUploading, newTraining]) => {
+  if (!newUploading && !newTraining) {
+    videoRef.value?.play()
+  }
+})
 
 const fetchData = async () => {
   loading.value = true
@@ -29,7 +64,7 @@ const fetchData = async () => {
     datasets.value = [...d]
     models.value = [...m]
   } catch (e: any) {
-    ElMessage.error('Failed to load data: ' + e.message)
+    ElMessage.error('无法加载资源列表: ' + e.message)
   } finally {
     loading.value = false
   }
@@ -45,10 +80,9 @@ const close = () => {
   }
 }
 
-// 轮询检查资源是否已出现在列表中 (Poll to check if resource exists in list)
 const pollForResource = async (type: 'dataset' | 'model', name: string, maxRetries = 10) => {
   for (let i = 0; i < maxRetries; i++) {
-    await new Promise(resolve => setTimeout(resolve, 1500)); // 每次间隔1.5秒
+    await new Promise(resolve => setTimeout(resolve, 1500));
     await fetchData();
     if (type === 'dataset') {
       if (datasets.value.some(d => d.datasetName === name)) return true;
@@ -59,7 +93,6 @@ const pollForResource = async (type: 'dataset' | 'model', name: string, maxRetri
   return false;
 }
 
-// Handlers
 const handleImportDataset = async () => {
   const input = document.createElement('input')
   input.type = 'file'
@@ -75,27 +108,22 @@ const handleImportDataset = async () => {
 
     isUploading.value = true
     uploadProgress.value = 0
+    startUploadFallback()
     
-    const notification = ElNotification.info({
-      title: '正在导入',
-      message: `正在从同步数据集 "${datasetName}"...`,
-      duration: 0,
-      showClose: false
-    })
-
     try {
-      // 1. 真实上传过程 (Real upload progress)
       await loadDataset(datasetName, files, relativePaths, (p) => {
-        uploadProgress.value = p
+        if (p > 0) {
+          hasRealUploadProgress = true
+          stopUploadFallback()
+        }
+        uploadProgress.value = Math.max(uploadProgress.value, p)
       })
       
-      // 2. 上传完成，进入后端处理/索引轮询阶段 (Upload done, polling for backend indexing)
-      uploadProgress.value = 100;
-      notification.message = `上传完成，正在同步数据库索引...`;
+      uploadProgress.value = 99;
       
       const success = await pollForResource('dataset', datasetName);
+      uploadProgress.value = 100;
       
-      notification.close();
       if (success) {
         ElMessage.success({
           message: `数据集 "${datasetName}" 导入并同步成功`,
@@ -106,11 +134,11 @@ const handleImportDataset = async () => {
         ElMessage.warning('数据集已上传，但同步到列表超时，请手动刷新');
       }
     } catch (err: any) {
-      notification.close();
       ElMessage.error('导入失败: ' + err.message)
     } finally {
       isUploading.value = false
       uploadProgress.value = 0
+      stopUploadFallback()
     }
   }
   input.click()
@@ -118,7 +146,7 @@ const handleImportDataset = async () => {
 
 const handleDeleteDataset = async (id: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除此数据集吗？', '警告', { type: 'warning' })
+    await ElMessageBox.confirm('确定要删除此数据集吗？该操作不可撤销。', '警告', { type: 'warning' })
     loading.value = true
     await deleteDataset(id)
     if (props.selectedDataset?.id === id) emit('update:selectedDataset', null)
@@ -140,25 +168,22 @@ const handleImportModel = () => {
     const modelName = file.name.replace('.model', '');
     isUploading.value = true
     uploadProgress.value = 0
+    startUploadFallback()
     
-    const notification = ElNotification.info({
-      title: '正在导入',
-      message: `正在导入模型 "${file.name}"...`,
-      duration: 0,
-      showClose: false
-    })
-
     try {
       await loadModel(modelName, file, (p) => {
-        uploadProgress.value = p
+        if (p > 0) {
+          hasRealUploadProgress = true
+          stopUploadFallback()
+        }
+        uploadProgress.value = Math.max(uploadProgress.value, p)
       })
       
-      uploadProgress.value = 100;
-      notification.message = `模型上传成功，正在同步数据库索引...`;
+      uploadProgress.value = 99;
       
       const success = await pollForResource('model', modelName);
+      uploadProgress.value = 100;
       
-      notification.close();
       if (success) {
         ElMessage.success({
           message: `模型 "${modelName}" 导入并同步成功`,
@@ -169,11 +194,11 @@ const handleImportModel = () => {
         ElMessage.warning('模型已上传，但同步到列表超时，请手动刷新');
       }
     } catch (err: any) {
-      notification.close();
       ElMessage.error('导入失败: ' + err.message)
     } finally {
       isUploading.value = false
       uploadProgress.value = 0
+      stopUploadFallback()
     }
   }
   input.click()
@@ -182,7 +207,7 @@ const handleImportModel = () => {
 const handleTrainModel = async (dataset?: any) => {
   const targetDataset = dataset && dataset.id ? dataset : props.selectedDataset;
   if (!targetDataset) {
-    ElMessage.warning('请先在资源管理器中选择一个数据集');
+    ElMessage.warning('请先在资源管理器中选择一个数据集作为训练源');
     return;
   }
 
@@ -196,30 +221,22 @@ const handleTrainModel = async (dataset?: any) => {
     isTraining.value = true
     trainingProgress.value = 0
     
-    // 模拟前端进度条 (Simulated frontend progress)
     const trainTimer = setInterval(() => {
       if (trainingProgress.value < 90) {
-        trainingProgress.value += Math.random() * 5
+        trainingProgress.value += Math.random() * 3
+      } else if (trainingProgress.value < 99.8) {
+        trainingProgress.value += 0.03 + Math.random() * 0.08
       }
-    }, 800)
-
-    const notification = ElNotification.info({
-      title: '训练开始',
-      message: `正在训练模型 "${modelName}"，请稍候...`,
-      duration: 0,
-      showClose: false
-    })
+    }, 600)
 
     try {
       await trainModel(targetDataset.id, modelName)
       clearInterval(trainTimer)
       trainingProgress.value = 95
-      notification.message = `算法计算完成，正在生成模型索引...`;
       
       const success = await pollForResource('model', modelName);
       trainingProgress.value = 100;
       
-      notification.close();
       if (success) {
         ElNotification.success({
           title: '训练完成',
@@ -230,11 +247,9 @@ const handleTrainModel = async (dataset?: any) => {
       }
     } catch (err: any) {
       clearInterval(trainTimer);
-      notification.close();
       ElMessage.error('训练失败: ' + err.message)
     }
   } catch (err: any) {
-    // Prompt cancelled
   } finally {
     isTraining.value = false
     trainingProgress.value = 0
@@ -268,7 +283,7 @@ const handleSelectImage = () => {
       emit('image-selected', imageInfo, previewUrl)
       close()
     } catch (err: any) {
-      ElMessage.error('Image selection failed: ' + err.message)
+      ElMessage.error('图像上传失败: ' + err.message)
     } finally {
       loading.value = false
     }
@@ -288,43 +303,44 @@ defineExpose({
   <el-dialog
     :model-value="visible"
     @update:model-value="close"
-    title="资源管理器"
+    title="资源管理器 (Explorer)"
     width="800px"
     custom-class="explorer-dialog"
     destroy-on-close
   >
     <div class="flex h-[500px] relative">
-      <!-- Upload/Training Progress Overlay (Linear at bottom) -->
+      
       <div v-if="isUploading || isTraining" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
         <div class="flex flex-col items-center max-w-md w-full px-10">
           <div class="mb-4 text-white text-xl font-medium">
             {{ isUploading ? (uploadProgress < 100 ? '正在同步资源...' : '服务器处理中...') : '正在训练模型...' }}
           </div>
           
-          <div class="w-full bg-white/10 rounded-full h-2 relative overflow-hidden">
-            <div 
-              class="absolute top-0 left-0 h-full bg-white transition-all duration-300 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-              :style="{ width: `${isUploading ? uploadProgress : trainingProgress}%` }"
-            ></div>
+          <div class="w-full max-w-xs aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 border border-white/20">
+            <video 
+              ref="videoRef"
+              src="/QiDONG!.mp4" 
+              autoplay 
+              loop 
+              muted 
+              playsinline 
+              class="w-full h-full object-cover"
+              @timeupdate="handleTimeUpdate"
+            ></video>
           </div>
           
-          <div class="mt-3 text-white font-mono text-lg">
-            {{ Math.round(isUploading ? uploadProgress : trainingProgress) }}%
+          <div class="mt-2 text-white font-mono text-lg">
+            {{ (isUploading ? uploadProgress : trainingProgress).toFixed(1) }}%
           </div>
           
-          <div class="mt-6 text-gray-400 text-sm animate-pulse">
-            {{ isUploading ? '正在通过 TCP 协议传输切片数据' : '正在计算 RF 算法特征向量' }}
-          </div>
           <div class="mt-1 text-gray-500 text-xs">请勿关闭当前资源管理器窗口</div>
         </div>
       </div>
 
-      <!-- Loading Progress Bar (for non-upload/train tasks) -->
       <div v-if="loading && !isUploading" class="absolute top-0 left-0 right-0 z-50">
         <el-progress :percentage="100" :indeterminate="true" :show-text="false" :stroke-width="2" />
       </div>
 
-      <!-- Sidebar -->
       <div class="w-48 border-r border-[var(--trae-border)] flex flex-col p-2 space-y-1">
         <div 
           class="px-3 py-2 rounded cursor-pointer flex items-center"
@@ -348,7 +364,6 @@ defineExpose({
         </el-button>
       </div>
 
-      <!-- Main Content -->
       <div class="flex-1 p-4 overflow-auto">
         <template v-if="activeTab === 'datasets'">
           <div class="flex justify-between items-center mb-4">
@@ -377,7 +392,7 @@ defineExpose({
                 </div>
               </div>
               <div class="flex space-x-2">
-                <el-button size="small" type="success" plain @click.stop="handleTrainModel(ds)" title="训练新模型" :disabled="isUploading || isTraining">
+                <el-button size="small" type="success" plain @click.stop="handleTrainModel(ds)" title="使用此数据集训练新模型" :disabled="isUploading || isTraining">
                   <template #icon><Play /></template>
                 </el-button>
                 <el-button size="small" type="danger" plain @click.stop="handleDeleteDataset(ds.id)" title="删除" :disabled="isUploading || isTraining">
@@ -411,11 +426,11 @@ defineExpose({
               <div>
                 <div class="font-medium text-base text-[var(--trae-text-active)]">{{ m.modelName }}</div>
                 <div class="text-xs text-gray-400 mt-1">
-                  Acc: {{ m.accuracy == null ? '—' : `${(m.accuracy * 100).toFixed(1)}%` }}
+                  准确率: {{ m.accuracy == null ? '—' : `${(m.accuracy * 100).toFixed(1)}%` }}
                   |
-                  F1: {{ m.f1Score == null ? '—' : `${(m.f1Score * 100).toFixed(1)}%` }}
+                  F1 分数: {{ m.f1Score == null ? '—' : `${(m.f1Score * 100).toFixed(1)}%` }}
                   |
-                  创建于: {{ new Date(m.createdTime).toLocaleDateString() }}
+                  创建时间: {{ new Date(m.createdTime).toLocaleDateString() }}
                 </div>
               </div>
               <div>

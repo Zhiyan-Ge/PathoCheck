@@ -7,6 +7,7 @@ import ReportDialog from './components/ReportDialog.vue'
 import type { Model, ImageInfo, AssessmentReport, Dataset } from './types'
 
 const explorerRef = ref<InstanceType<typeof Explorer> | null>(null)
+
 const explorerVisible = ref(false)
 const assessmentDialogVisible = ref(false)
 const reportDialogVisible = ref(false)
@@ -48,12 +49,10 @@ provide('appState', {
 
 <template>
   <div class="h-screen w-screen flex flex-col relative overflow-hidden bg-black">
-    <!-- Background -->
     <div class="absolute inset-0 z-0 opacity-40 flex items-center justify-center pointer-events-none">
       <img src="/taffy.png" class="object-contain w-full h-full" alt="Background" />
     </div>
 
-    <!-- Main UI layer -->
     <div class="relative z-10 flex flex-col h-full">
       <Toolbar 
         @open-explorer="openExplorer"
@@ -70,7 +69,6 @@ provide('appState', {
       </div>
     </div>
 
-    <!-- Modals -->
     <Explorer 
       ref="explorerRef"
       v-model:visible="explorerVisible" 

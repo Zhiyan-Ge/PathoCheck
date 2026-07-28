@@ -20,7 +20,7 @@ const showAbout = () => {
     `
     <div class="space-y-4">
       <div class="text-center">
-        <h3 class="text-lg font-bold text-[var(--trae-text-active)]">PathoCheck v1.0.3</h3>
+        <h3 class="text-lg font-bold text-[var(--trae-text-active)]">PathoCheck v1.0.5</h3>
         <p class="text-sm opacity-70">病理切片图像质量评估与有效区域筛选平台</p>
       </div>
       <div class="bg-white/5 p-3 rounded text-sm space-y-2 border border-white/10">
@@ -33,7 +33,7 @@ const showAbout = () => {
         </ul>
         <div class="pt-2 border-t border-white/10 mt-2">
           <p><b>环境信息：</b> Java Spring Boot + Vue 3 + Element Plus</p>
-          <p><b>开发者：</b> Taffy团队</p>
+          <p><b>开发者：</b> 糯糯团队</p>
         </div>
       </div>
       <p class="text-[10px] text-center opacity-40">© 2026 PathoCheck Project. All rights reserved.</p>
@@ -78,7 +78,6 @@ const downloadLogs = () => {
 
 <template>
   <div class="h-10 flex items-center bg-[var(--trae-toolbar-bg)] border-b border-[var(--trae-border)] px-4 select-none">
-    <!-- Menu -->
     <div class="flex space-x-2">
       <el-dropdown trigger="click">
         <span class="text-sm px-3 py-1 cursor-pointer hover:bg-white/10 rounded flex items-center outline-none text-[var(--trae-text)]">
@@ -103,7 +102,7 @@ const downloadLogs = () => {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="showLogs">Log Viewer</el-dropdown-item>
+            <el-dropdown-item @click="showLogs">系统日志查看器 (Log Viewer)</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -115,7 +114,7 @@ const downloadLogs = () => {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="showAbout">About PathoCheck</el-dropdown-item>
+            <el-dropdown-item @click="showAbout">关于 PathoCheck</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -123,23 +122,21 @@ const downloadLogs = () => {
 
     <div class="flex-1"></div>
 
-    <!-- Status -->
     <div class="flex space-x-6 text-xs text-[var(--trae-text)]">
       <div>
-        <span class="opacity-60">Dataset:</span>
+        <span class="opacity-60">数据集:</span>
         <span class="ml-1 font-medium text-[var(--trae-text-active)]">{{ currentDataset?.datasetName || '—' }}</span>
       </div>
       <div>
-        <span class="opacity-60">Model:</span>
+        <span class="opacity-60">模型:</span>
         <span class="ml-1 font-medium text-[var(--trae-text-active)]">{{ currentModel?.modelName || '—' }}</span>
       </div>
       <div>
-        <span class="opacity-60">Image:</span>
+        <span class="opacity-60">当前图像:</span>
         <span class="ml-1 font-medium text-[var(--trae-text-active)]">{{ currentImage?.imageName || '—' }}</span>
       </div>
     </div>
 
-    <!-- Log Viewer Dialog -->
     <el-dialog
       v-model="logDialogVisible"
       title="系统日志 (System Logs)"
@@ -148,7 +145,6 @@ const downloadLogs = () => {
       append-to-body
     >
       <div class="relative">
-        <!-- Loading Progress Bar -->
         <div v-if="logLoading" class="absolute top-0 left-0 right-0 z-50">
           <el-progress :percentage="100" :indeterminate="true" :show-text="false" :stroke-width="2" />
         </div>
@@ -161,11 +157,12 @@ const downloadLogs = () => {
             <template #icon><Download class="w-3 h-3 mr-1" /></template>保存到本地
           </el-button>
         </div>
+        
         <div class="bg-black/40 p-4 rounded border border-white/10 font-mono text-xs overflow-auto max-h-[500px] whitespace-pre-wrap text-gray-300">
           {{ logs || '暂无日志内容' }}
         </div>
         <div class="mt-4 text-[10px] text-gray-500 italic">
-          注：系统日志在后端自动滚动更新，旧日志会被覆盖。若需永久保存，请点击上方“保存到本地”按钮。
+          注：系统日志在后端自动滚动更新。若需留档，请点击上方“保存到本地”按钮。
         </div>
       </div>
     </el-dialog>

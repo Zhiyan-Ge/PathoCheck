@@ -9,12 +9,9 @@ const apiClient = axios.create({
 export const loadDataset = async (datasetName: string, files: File[], relativePaths: string[], onProgress?: (percent: number) => void) => {
   const formData = new FormData();
   formData.append('datasetName', datasetName);
-  files.forEach(file => {
-    formData.append('files', file);
-  });
-  relativePaths.forEach(path => {
-    formData.append('relativePaths', path);
-  });
+  files.forEach(file => formData.append('files', file));
+  relativePaths.forEach(path => formData.append('relativePaths', path));
+  
   const res = await apiClient.post('/datasets/load', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (progressEvent) => {

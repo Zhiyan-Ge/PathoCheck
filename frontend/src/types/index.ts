@@ -32,9 +32,11 @@ export interface AssessmentReport {
   imageName: string;
   modelId: number;
   modelName: string;
+  
   predictedLabel: string;
   validProbability: number;
   invalidProbability: number;
+  
   meanBrightness: number;
   brightnessStd: number;
   meanSaturation: number;
@@ -44,6 +46,7 @@ export interface AssessmentReport {
   entropy: number;
   sharpness: number;
   edgeRatio: number;
+  
   qualityScore: number;
   finalStatus: 'PASS' | 'WARNING' | 'REJECT';
   warningMessages: string[];
