@@ -16,15 +16,7 @@ const emit = defineEmits(['update:visible', 'assessment-complete'])
 const loading = ref(false)
 const progress = ref(0)
 const videoRef = ref<HTMLVideoElement | null>(null)
-const PAUSE_TIME = 884
 let timer: any = null
-
-const handleTimeUpdate = () => {
-  if (videoRef.value && loading.value && videoRef.value.currentTime >= PAUSE_TIME) {
-    videoRef.value.pause()
-    videoRef.value.currentTime = PAUSE_TIME
-  }
-}
 
 const startProgress = () => {
   progress.value = 0
@@ -90,11 +82,9 @@ const handleStart = async () => {
               ref="videoRef"
               src="/QiDONG!.mp4" 
               autoplay 
-              loop 
               muted 
               playsinline 
               class="w-full h-full object-cover"
-              @timeupdate="handleTimeUpdate"
             ></video>
           </div>
 

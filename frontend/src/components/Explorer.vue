@@ -22,7 +22,7 @@ const isUploading = ref(false)
 const trainingProgress = ref(0)
 const isTraining = ref(false)
 const videoRef = ref<HTMLVideoElement | null>(null)
-const PAUSE_TIME = 884
+const MAX_POLL_RETRIES = 60
 let uploadFallbackTimer: any = null
 let hasRealUploadProgress = false
 
@@ -41,13 +41,6 @@ const stopUploadFallback = () => {
   if (uploadFallbackTimer) {
     clearInterval(uploadFallbackTimer)
     uploadFallbackTimer = null
-  }
-}
-
-const handleTimeUpdate = () => {
-  if (videoRef.value && (isUploading.value || isTraining.value) && videoRef.value.currentTime >= PAUSE_TIME) {
-    videoRef.value.pause()
-    videoRef.value.currentTime = PAUSE_TIME
   }
 }
 
@@ -80,7 +73,7 @@ const close = () => {
   }
 }
 
-const pollForResource = async (type: 'dataset' | 'model', name: string, maxRetries = 10) => {
+const pollForResource = async (type: 'dataset' | 'model', name: string, maxRetries = MAX_POLL_RETRIES) => {
   for (let i = 0; i < maxRetries; i++) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     await fetchData();
@@ -116,12 +109,16 @@ const handleImportDataset = async () => {
           hasRealUploadProgress = true
           stopUploadFallback()
         }
-        uploadProgress.value = Math.max(uploadProgress.value, p)
+        // 将 0-100% 的真实物理进度映射到 UI 的 0-90%
+        const mappedProgress = (p * 0.9)
+        uploadProgress.value = Math.max(uploadProgress.value, mappedProgress)
       })
       
-      uploadProgress.value = 99;
+      // 网络上传彻底完成，UI 进度来到 90%
+      uploadProgress.value = 90;
       
       const success = await pollForResource('dataset', datasetName);
+      // 数据库同步彻底完成，UI 进度来到 100%
       uploadProgress.value = 100;
       
       if (success) {
@@ -176,10 +173,12 @@ const handleImportModel = () => {
           hasRealUploadProgress = true
           stopUploadFallback()
         }
-        uploadProgress.value = Math.max(uploadProgress.value, p)
+        // 将真实物理进度映射到 UI 的 0-90%
+        const mappedProgress = (p * 0.9)
+        uploadProgress.value = Math.max(uploadProgress.value, mappedProgress)
       })
       
-      uploadProgress.value = 99;
+      uploadProgress.value = 90;
       
       const success = await pollForResource('model', modelName);
       uploadProgress.value = 100;
@@ -321,11 +320,9 @@ defineExpose({
               ref="videoRef"
               src="/QiDONG!.mp4" 
               autoplay 
-              loop 
               muted 
               playsinline 
               class="w-full h-full object-cover"
-              @timeupdate="handleTimeUpdate"
             ></video>
           </div>
           
